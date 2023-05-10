@@ -1,0 +1,9 @@
+name: AutoVPNBlocker
+version: '1.0-SNAPSHOT'
+main: me.thatlukinhasguy.autovpnblocker.AntiVPNPlugin
+api-version: 1.19
+commands:
+  antivpn:
+    description: Reloads, adds an user to the VPN whitelist and sends the args.
+    usage: '/antivpn <reload|adduser|help|removeuser|addip|removeip> <playername|ip>'
+    permission: antivpn.admin
