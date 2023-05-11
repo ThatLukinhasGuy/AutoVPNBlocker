@@ -20,6 +20,21 @@ import java.net.URL;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import org.json.JSONObject;
+
+import java.io.IOException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+
+
 import org.json.JSONObject;
 
 public class AntiVPNPlugin extends JavaPlugin implements Listener, CommandExecutor {
@@ -66,23 +81,24 @@ public class AntiVPNPlugin extends JavaPlugin implements Listener, CommandExecut
             }
         });
     }
+
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (command.getName().equalsIgnoreCase("antivpn")) {
             if (args.length == 0) {
-                sender.sendMessage(ChatColor.WHITE + "[" + ChatColor.AQUA + "AutoVPNBlocker" + ChatColor.WHITE + "] " + ChatColor.WHITE + "Uso inválido. Para ver os argumentos corretos, digite " + ChatColor.GREEN + "/antivpn help");
+                sender.sendMessage(ChatColor.WHITE + "[" + ChatColor.AQUA + "AutoVPNBlocker" + ChatColor.WHITE + "] " + ChatColor.GRAY + "Uso inválido. Para ver os argumentos corretos, digite " + ChatColor.GREEN + "/antivpn help");
                 return true;
             }
 
             if (args[0].equalsIgnoreCase("adduser")) {
                 if (args.length < 2) {
-                    sender.sendMessage(ChatColor.WHITE + "[" + ChatColor.AQUA + "AutoVPNBlocker" + ChatColor.WHITE + "] " + "Uso correto: " + ChatColor.GREEN + "/antivpn adduser <nome>");
+                    sender.sendMessage(ChatColor.WHITE + "[" + ChatColor.AQUA + "AutoVPNBlocker" + ChatColor.WHITE + "] " + ChatColor.GRAY + "Uso correto: " + ChatColor.GREEN + "/antivpn adduser <nome>");
                     return true;
                 }
                 String playerName = args[1];
                 plugin.getConfig().set("whitelist." + playerName, true);
                 plugin.saveConfig();
-                sender.sendMessage(ChatColor.WHITE + "[" + ChatColor.AQUA + "AutoVPNBlocker" + ChatColor.WHITE + "] " + "O jogador " + ChatColor.GREEN + playerName + ChatColor.WHITE + " foi adicionado à whitelist do AntiVPN");
+                sender.sendMessage(ChatColor.WHITE + "[" + ChatColor.AQUA + "AutoVPNBlocker" + ChatColor.WHITE + "] " + ChatColor.GRAY + "O jogador " + ChatColor.GREEN + playerName + ChatColor.GRAY + " foi adicionado à whitelist do AntiVPN");
                 return true;
             }
 
@@ -90,114 +106,124 @@ public class AntiVPNPlugin extends JavaPlugin implements Listener, CommandExecut
             if (args[0].equalsIgnoreCase("reload")) {
                 reloadConfig();
                 getConfig();
-                sender.sendMessage(ChatColor.WHITE + "[" + ChatColor.AQUA + "AutoVPNBlocker" + ChatColor.WHITE + "] " + "O plugin foi " + ChatColor.GREEN + " recarregado " + ChatColor.WHITE + " com sucesso");
+                sender.sendMessage(ChatColor.WHITE + "[" + ChatColor.AQUA + "AutoVPNBlocker" + ChatColor.WHITE + "] " + ChatColor.GRAY + "O plugin foi " + ChatColor.GREEN + " recarregado " + ChatColor.GRAY + " com sucesso");
                 return true;
             }
 
             if (args[0].equalsIgnoreCase("help")) {
                 sender.sendMessage(ChatColor.WHITE + "[" + ChatColor.AQUA + "AutoVPNBlocker" + ChatColor.WHITE + "] " + "Comandos:");
-                sender.sendMessage(ChatColor.GREEN + "/antivpn reload" + ChatColor.WHITE + " - Recarrega a configuração do plugin");
-                sender.sendMessage(ChatColor.GREEN + "/antivpn adduser <nome> " + ChatColor.WHITE + " - Adiciona um jogador à whitelist do AntiVPN");
-                sender.sendMessage(ChatColor.GREEN + "/antivpn removeuser <nome> " + ChatColor.WHITE + " - Remove um jogador da whitelist do AntiVPN");
-                sender.sendMessage(ChatColor.GREEN + "/antivpn addip <ip> " + ChatColor.WHITE + " - Adiciona um IP à whitelist do AntiVPN");
-                sender.sendMessage(ChatColor.GREEN + "/antivpn removeip <ip> " + ChatColor.WHITE + " - Remove um IP da whitelist do AntiVPN");
-                sender.sendMessage(ChatColor.GREEN + "/antivpn help" + ChatColor.WHITE + " - Mostra essa mensagem");
+                sender.sendMessage(ChatColor.GREEN + "/antivpn reload" + ChatColor.GRAY + " - Recarrega a configuração do plugin");
+                sender.sendMessage(ChatColor.GREEN + "/antivpn adduser <nome> " + ChatColor.GRAY + " - Adiciona um jogador à whitelist do AntiVPN");
+                sender.sendMessage(ChatColor.GREEN + "/antivpn removeuser <nome> " + ChatColor.GRAY + " - Remove um jogador da whitelist do AntiVPN");
+                sender.sendMessage(ChatColor.GREEN + "/antivpn addip <ip> " + ChatColor.GRAY + " - Adiciona um IP à whitelist do AntiVPN");
+                sender.sendMessage(ChatColor.GREEN + "/antivpn removeip <ip> " + ChatColor.GRAY + " - Remove um IP da whitelist do AntiVPN");
+                sender.sendMessage(ChatColor.GREEN + "/antivpn help" + ChatColor.GRAY + " - Mostra essa mensagem");
                 return true;
             }
 
             if (args[0].equalsIgnoreCase("removeuser")) {
                 if (args.length < 2) {
-                    sender.sendMessage(ChatColor.WHITE + "[" + ChatColor.AQUA + "AutoVPNBlocker" + ChatColor.WHITE + "] " + "Uso correto: " + ChatColor.GREEN + "/antivpn removeuser <nome>");
+                    sender.sendMessage(ChatColor.WHITE + "[" + ChatColor.AQUA + "AutoVPNBlocker" + ChatColor.WHITE + "] " + ChatColor.GRAY + "Uso correto: " + ChatColor.GREEN + "/antivpn removeuser <nome>");
                     return true;
                 }
                 String playerName = args[1];
                 if (plugin.getConfig().contains("whitelist." + playerName)) {
                     plugin.getConfig().set("whitelist." + playerName, null);
                     plugin.saveConfig();
-                    sender.sendMessage(ChatColor.WHITE + "[" + ChatColor.AQUA + "AutoVPNBlocker" + ChatColor.WHITE + "] " + "O jogador " + ChatColor.GREEN + playerName + ChatColor.WHITE + " foi removido da whitelist do AntiVPN");
+                    sender.sendMessage(ChatColor.WHITE + "[" + ChatColor.AQUA + "AutoVPNBlocker" + ChatColor.WHITE + "] " + ChatColor.GRAY + "O jogador " + ChatColor.GREEN + playerName + ChatColor.GRAY + " foi removido da whitelist do AntiVPN");
                 } else {
-                    sender.sendMessage(ChatColor.WHITE + "[" + ChatColor.AQUA + "AutoVPNBlocker" + ChatColor.WHITE + "] " + "O jogador " + ChatColor.GREEN + playerName + ChatColor.WHITE + " não está na whitelist do AntiVPN");
+                    sender.sendMessage(ChatColor.WHITE + "[" + ChatColor.AQUA + "AutoVPNBlocker" + ChatColor.WHITE + "] " + ChatColor.GRAY + "O jogador " + ChatColor.GREEN + playerName + ChatColor.GRAY + " não está na whitelist do AntiVPN");
                 }
                 return true;
             }
 
             if (args[0].equalsIgnoreCase("addip")) {
                 if (args.length < 2) {
-                    sender.sendMessage(ChatColor.WHITE + "[" + ChatColor.AQUA + "AutoVPNBlocker" + ChatColor.WHITE + "] " + "Uso correto: " + ChatColor.GREEN + "/antivpn addip <ip>");
+                    sender.sendMessage(ChatColor.WHITE + "[" + ChatColor.AQUA + "AutoVPNBlocker" + ChatColor.WHITE + "] " + ChatColor.GRAY + "Uso correto: " + ChatColor.GREEN + "/antivpn addip <ip>");
                     return true;
                 }
                 String ipAddress = args[1];
                 plugin.getConfig().set("ipwhitelist." + ipAddress, true);
                 plugin.saveConfig();
-                sender.sendMessage(ChatColor.WHITE + "[" + ChatColor.AQUA + "AutoVPNBlocker" + ChatColor.WHITE + "] " + "O IP " + ChatColor.GREEN + ipAddress + ChatColor.WHITE + " foi adicionado à whitelist do AntiVPN");
+                sender.sendMessage(ChatColor.WHITE + "[" + ChatColor.AQUA + "AutoVPNBlocker" + ChatColor.WHITE + "] " + ChatColor.GRAY + "O IP " + ChatColor.GREEN + ipAddress + ChatColor.GRAY + " foi adicionado à whitelist do AntiVPN");
                 return true;
             }
 
             if (args[0].equalsIgnoreCase("removeip")) {
                 if (args.length < 2) {
-                    sender.sendMessage(ChatColor.WHITE + "[" + ChatColor.AQUA + "AutoVPNBlocker" + ChatColor.WHITE + "] " + "Uso correto: " + ChatColor.GREEN + "/antivpn removeip <ip>");
+                    sender.sendMessage(ChatColor.WHITE + "[" + ChatColor.AQUA + "AutoVPNBlocker" + ChatColor.WHITE + "] " + ChatColor.GRAY + "Uso correto: " + ChatColor.GREEN + "/antivpn removeip <ip>");
                     return true;
                 }
                 String ipAddress = args[1];
                 if (plugin.getConfig().contains("ipwhitelist." + ipAddress)) {
                     plugin.getConfig().set("ipwhitelist." + ipAddress, null);
                     plugin.saveConfig();
-                    sender.sendMessage(ChatColor.WHITE + "[" + ChatColor.AQUA + "AutoVPNBlocker" + ChatColor.WHITE + "] " + "O IP " + ChatColor.GREEN + ipAddress + ChatColor.WHITE + " foi removido da whitelist do AntiVPN");
+                    sender.sendMessage(ChatColor.WHITE + "[" + ChatColor.AQUA + "AutoVPNBlocker" + ChatColor.WHITE + "] " + ChatColor.GRAY + "O IP " + ChatColor.GREEN + ipAddress + ChatColor.GRAY + " foi removido da whitelist do AntiVPN");
                 } else {
-                    sender.sendMessage(ChatColor.WHITE + "[" + ChatColor.AQUA + "AutoVPNBlocker" + ChatColor.WHITE + "] " + "O IP " + ChatColor.GREEN + ipAddress + ChatColor.WHITE + " não está na whitelist do AntiVPN");
+                    sender.sendMessage(ChatColor.WHITE + "[" + ChatColor.AQUA + "AutoVPNBlocker" + ChatColor.WHITE + "] " + ChatColor.GRAY + "O IP " + ChatColor.GREEN + ipAddress + ChatColor.GRAY + " não está na whitelist do AntiVPN");
                 }
                 return true;
             }
 
 
-            sender.sendMessage(ChatColor.WHITE + "[" + ChatColor.AQUA + "AutoVPNBlocker" + ChatColor.WHITE + "] " + ChatColor.WHITE + "Uso inválido. Para ver os argumentos corretos, digite " + ChatColor.GREEN + "/antivpn help");
+            sender.sendMessage(ChatColor.WHITE + "[" + ChatColor.AQUA + "AutoVPNBlocker" + ChatColor.WHITE + "] " + ChatColor.GRAY + "Uso inválido. Para ver os argumentos corretos, digite " + ChatColor.GREEN + "/antivpn help");
             return true;
-            }
-        return false;
         }
+        return false;
+    }
 
     private void set(String whitelistedPlayers, Set<String> whitelistedPlayers1) {
     }
 
-    private CompletableFuture<Map<String, Boolean>> isUsingVPNAsync(String ip) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                URL apiUrl = new URL("https://api.incolumitas.com/?q=" + ip);
-                HttpURLConnection connection = (HttpURLConnection) apiUrl.openConnection();
-                connection.setRequestMethod("GET");
-                connection.setRequestProperty("Accept", "application/json");
-                connection.setConnectTimeout(5000);
-                connection.setReadTimeout(5000);
+    private static final OkHttpClient httpClient = new OkHttpClient.Builder()
+            .connectTimeout(5, TimeUnit.SECONDS)
+            .readTimeout(5, TimeUnit.SECONDS)
+            .build();
 
-                int responseCode = connection.getResponseCode();
-                if (responseCode != 200) {
-                    getLogger().warning("Parece que a API não está funcionando (código de resposta: " + responseCode + ")");
+    private static final Cache<String, Map<String, Boolean>> cache = CacheBuilder.newBuilder()
+            .maximumSize(1000)
+            .expireAfterWrite(1, TimeUnit.HOURS)
+            .build();
+
+    private CompletableFuture<Map<String, Boolean>> isUsingVPNAsync(String ip) {
+        Map<String, Boolean> cachedResult = cache.getIfPresent(ip);
+        if (cachedResult != null) {
+            return CompletableFuture.completedFuture(cachedResult);
+        }
+
+        Request request = new Request.Builder()
+                .url("https://api.incolumitas.com/?q=" + ip)
+                .addHeader("Accept", "application/json")
+                .build();
+
+        return CompletableFuture.supplyAsync(() -> {
+            Response response = null;
+            try {
+                response = httpClient.newCall(request).execute();
+                if (!response.isSuccessful()) {
+                    getLogger().warning("Parece que a API não está funcionando (código de resposta: " + response.code() + ")");
                     return Collections.emptyMap();
                 }
 
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
-                    StringBuilder response = new StringBuilder();
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        response.append(line);
-                    }
+                String responseBody = response.body().string();
+                JSONObject obj = new JSONObject(responseBody);
+                Map<String, Boolean> vpnInfo = new HashMap<>();
+                vpnInfo.put("is_tor", obj.getBoolean("is_tor"));
+                vpnInfo.put("is_abuser", obj.getBoolean("is_abuser"));
+                vpnInfo.put("is_bogon", obj.getBoolean("is_bogon"));
+                vpnInfo.put("is_datacenter", obj.getBoolean("is_datacenter"));
+                vpnInfo.put("is_proxy", obj.getBoolean("is_proxy"));
+                vpnInfo.put("is_vpn", obj.getBoolean("is_vpn"));
 
-                    JSONObject obj = new JSONObject(response.toString());
-                    Map<String, Boolean> vpnInfo = new HashMap<>();
-                    vpnInfo.put("is_tor", obj.getBoolean("is_tor"));
-                    vpnInfo.put("is_abuser", obj.getBoolean("is_abuser"));
-                    vpnInfo.put("is_bogon", obj.getBoolean("is_bogon"));
-                    vpnInfo.put("is_datacenter", obj.getBoolean("is_datacenter"));
-                    vpnInfo.put("is_proxy", obj.getBoolean("is_proxy"));
-                    vpnInfo.put("is_vpn", obj.getBoolean("is_vpn"));
-
-                    return vpnInfo;
-                }
+                cache.put(ip, vpnInfo);
+                return vpnInfo;
             } catch (IOException e) {
                 throw new RuntimeException(e);
+            } finally {
+                if (response != null && response.body() != null) {
+                    response.body().close();
+                }
             }
         });
     }
-
-
 }
